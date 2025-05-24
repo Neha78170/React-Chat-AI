@@ -24,7 +24,6 @@ const Sidebar = ({ onSelectUser }) => {
             className="rotate-90 hover:text-blue-400"
             title={user}
           >
-            {user}
           </button>
         ))}
       </div>

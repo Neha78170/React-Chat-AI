@@ -1,97 +1,105 @@
 import React, { useEffect, useRef, useState } from "react";
 
-const ChatArea = ({selectedUser}) => {
-  const [messages, setMessages] = useState([
-    {
-      form: "bot",
-      text: "Hello! How can I help you?",
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    },
-  ]);
+const ChatArea = ({ selectedUser }) => {
+  const [conversation, setConversation] = useState({});
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const currentMessages = conversation[selectedUser?.id] || [];
+
+  const getTime = () => {
+    return new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
-  useEffect(() => {
-    scrollToBottom();
+  const updateConversation = (newMessages) => {
+    setConversation((prev) => ({
+      ...prev,
+      [selectedUser?.id]: newMessages,
+    }));
+  };
 
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage.form === "user") {
-      const timeout = setTimeout(() => {
-        let reply = "I'm here to help!";
-        const userText = lastMessage.text.toLowerCase();
-
-        if (userText.includes("hi") || userText.includes("hello")) {
-          reply = "Hello! Nice to meet you!";
-        } else if (userText.includes("thanks") || userText.includes("thank")) {
-          reply = "You're welcome!";
-        }
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            form: "bot",
-            text: "Typing...",
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-        ]);
-
-        const typingTimeout = setTimeout(() => {
-          setMessages((prev) => [
-            ...prev.slice(0, -1),
-            {
-              form: "bot",
-              text: reply,
-              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            },
-          ]);
-        }, 1000);
-
-        return () => clearTimeout(typingTimeout);
-      }, 500);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [messages]);
-
+  // Handle message submit
   const handleSubmit = (e) => {
     e.preventDefault();
     if (inputValue.trim() === "") return;
-    setMessages((prev) => [
-      ...prev,
+
+    updateConversation([
+      ...currentMessages,
       {
-        form: "user",
+        from: "user",
         text: inputValue,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: getTime(),
       },
     ]);
     setInputValue("");
   };
 
+  // Handle emoji click
   const handleEmojiClick = (emoji) => {
-    setMessages((prev) => [
-      ...prev,
+    updateConversation([
+      ...currentMessages,
       {
-        form: "user",
+        from: "user",
         text: emoji,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: getTime(),
       },
     ]);
   };
+
+  // Auto-scroll to the bottom when messages update
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [currentMessages]);
+
+  // Simulated bot reply
+  useEffect(() => {
+    const lastMessage = currentMessages[currentMessages.length - 1];
+    if (lastMessage?.from === "user") {
+      const replyTimeout = setTimeout(() => {
+        const userText = lastMessage.text.toLowerCase();
+        let reply = "I am here to help you!";
+        // Add custom replies if needed here
+
+        updateConversation([
+          ...currentMessages,
+          {
+            from: "bot",
+            text: reply,
+            timestamp: getTime(),
+          },
+        ]);
+      }, 1000);
+
+      return () => clearTimeout(replyTimeout);
+    }
+  }, [currentMessages]);
+
+  if (!selectedUser) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-500">
+        Select a user to start chatting
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full w-full bg-white rounded-lg shadow p-4">
       {/* Header */}
       <div className="border-b pb-3 mb-3">
-        <h2 className="text-lg font-semibold text-gray-700">Chat with Neha</h2>
+        <h2 className="text-lg font-semibold text-gray-700">
+          Chat with {selectedUser.name || "Neha"}
+        </h2>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4">
-        {messages.map((message, index) => (
+        {currentMessages.map((message, index) => (
           <div
             key={index}
             className={`flex ${message.from === "user" ? "justify-end" : "justify-start"}`}
@@ -99,7 +107,7 @@ const ChatArea = ({selectedUser}) => {
             <div className="flex flex-col max-w-xs">
               <div
                 className={`px-4 py-2 rounded-lg ${
-                  message.form === "user"
+                  message.from === "user"
                     ? "bg-blue-500 text-white"
                     : "bg-gray-300 text-black"
                 }`}
